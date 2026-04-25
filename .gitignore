@@ -38,8 +38,9 @@ build/
 Thumbs.db
 
 # Sim runtime artifacts
-backend/cache/
 backend/tests/last_result.json
+# NOTE: backend/cache/ IS committed — canonical RTO v1/v2 results live there
+# so demo loads instantly even after Railway restarts (ephemeral disk).
 /tmp/uvicorn.log
 
 # Don't ship the MiroFish reference clone
