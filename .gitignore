@@ -1,0 +1,46 @@
+# Secrets — NEVER commit
+.env
+.env.local
+.env.*.local
+*.key
+*.pem
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.venv/
+venv/
+env/
+.Python
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Node / frontend (when P2/P3 land)
+node_modules/
+.next/
+.turbo/
+dist/
+build/
+.cache/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Sim runtime artifacts
+backend/cache/
+backend/tests/last_result.json
+/tmp/uvicorn.log
+
+# Don't ship the MiroFish reference clone
+MiroFish/

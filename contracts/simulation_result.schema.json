@@ -1,0 +1,293 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SimulationResult",
+  "description": "Contract returned by POST /simulate. Action-based model (MiroFish-inspired). Frontend (P2 graph, P3 results+feed) builds against this shape.",
+  "type": "object",
+  "required": ["scenario_id", "policy_version", "baseline", "predicted", "actions", "snapshots", "cohort_metrics", "themes", "recommendation"],
+  "properties": {
+    "scenario_id": {
+      "type": "string",
+      "description": "Stable id, e.g. 'rto_v1' or 'rto_v2'. Used for caching."
+    },
+    "policy_version": {
+      "type": "string",
+      "enum": ["v1", "v2"],
+      "description": "Which version of the policy this is. Drives compare view."
+    },
+    "policy_text": {
+      "type": "string",
+      "description": "Echo of the input policy for display"
+    },
+    "parsed_policy": {
+      "type": "object",
+      "description": "Output of the policy parser, surfaced for transparency",
+      "properties": {
+        "scenario_type": {"type": "string"},
+        "category": {"type": "string"},
+        "summary": {"type": "string"},
+        "tone": {"type": "string"},
+        "severity": {"type": "number"},
+        "dimensions_affected": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "model_version": {
+      "type": "string",
+      "example": "sim-0.3"
+    },
+    "baseline": {
+      "type": "object",
+      "required": ["enps", "engagement", "trust", "intent_to_stay"],
+      "properties": {
+        "enps": {"type": "number", "example": 22},
+        "engagement": {"type": "number", "description": "0-1 scale", "example": 0.74},
+        "trust": {"type": "number", "example": 0.68},
+        "intent_to_stay": {"type": "number", "example": 0.81}
+      }
+    },
+    "predicted": {
+      "type": "object",
+      "required": ["enps", "engagement", "trust", "intent_to_stay", "confidence"],
+      "properties": {
+        "enps": {"type": "number"},
+        "engagement": {"type": "number"},
+        "trust": {"type": "number"},
+        "intent_to_stay": {"type": "number"},
+        "confidence": {"type": "string", "enum": ["high", "medium", "low"]},
+        "confidence_interval_enps": {
+          "type": "array",
+          "items": {"type": "number"},
+          "minItems": 2,
+          "maxItems": 2
+        }
+      }
+    },
+    "actions": {
+      "type": "array",
+      "description": "Time-ordered list of every action taken during the 30-day simulation. Drives BOTH the live action feed (P3) and the graph edge animations (P2). Sorted by day ascending, then by intra-day order.",
+      "items": {
+        "type": "object",
+        "required": ["id", "day", "agent_id", "action_type", "intensity"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Stable unique id for keying React lists. Format: 'act_d{day}_{seq}'"
+          },
+          "day": {"type": "integer", "minimum": 0, "maximum": 29},
+          "intra_day_order": {
+            "type": "integer",
+            "description": "Order within the day. Used for animation pacing."
+          },
+          "agent_id": {
+            "type": "string",
+            "description": "Acting agent's id from northwind.json"
+          },
+          "action_type": {
+            "type": "string",
+            "enum": [
+              "VENT_TO_PEER",
+              "POST_IN_CHANNEL",
+              "MESSAGE_MANAGER",
+              "GO_QUIET",
+              "UPDATE_LINKEDIN",
+              "ADVOCATE",
+              "REQUEST_EXCEPTION",
+              "DO_NOTHING"
+            ]
+          },
+          "target": {
+            "type": "object",
+            "description": "Who/what the action is directed at. Shape varies by action_type.",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": ["agent", "channel", "manager", "external", "none"]
+              },
+              "value": {
+                "type": "string",
+                "description": "agent_id for 'agent', channel name like '#engineering' for 'channel', manager's agent_id for 'manager', etc."
+              }
+            }
+          },
+          "content": {
+            "type": "string",
+            "description": "What the agent said/wrote. First-person voice. Empty string for GO_QUIET / DO_NOTHING / UPDATE_LINKEDIN."
+          },
+          "intensity": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1,
+            "description": "Strength of the action. Higher = more dramatic visual effect."
+          },
+          "is_visible_to": {
+            "type": "array",
+            "description": "agent_ids who observe this action. Drives sentiment spread and the visible audience for animations.",
+            "items": {"type": "string"}
+          },
+          "sentiment_impact": {
+            "type": "object",
+            "description": "Computed deltas applied as a result of this action.",
+            "properties": {
+              "actor_delta": {"type": "number"},
+              "observer_delta": {"type": "number"}
+            }
+          }
+        }
+      }
+    },
+    "action_volume_summary": {
+      "type": "object",
+      "description": "Aggregate counts by action_type across the whole simulation. Drives compare view headline numbers.",
+      "properties": {
+        "VENT_TO_PEER": {"type": "integer"},
+        "POST_IN_CHANNEL": {"type": "integer"},
+        "MESSAGE_MANAGER": {"type": "integer"},
+        "GO_QUIET": {"type": "integer"},
+        "UPDATE_LINKEDIN": {"type": "integer"},
+        "ADVOCATE": {"type": "integer"},
+        "REQUEST_EXCEPTION": {"type": "integer"},
+        "DO_NOTHING": {"type": "integer"}
+      }
+    },
+    "snapshots": {
+      "type": "array",
+      "description": "30 daily snapshots of derived agent state. Sentiment is computed from cumulative action impacts, not LLM-assigned. P2's graph color uses this; action animations use the actions[] array.",
+      "minItems": 30,
+      "maxItems": 30,
+      "items": {
+        "type": "object",
+        "required": ["day", "agent_states"],
+        "properties": {
+          "day": {"type": "integer"},
+          "agent_states": {
+            "type": "array",
+            "description": "One entry per agent, same length as northwind.json agents array",
+            "items": {
+              "type": "object",
+              "required": ["agent_id", "sentiment", "is_active_today"],
+              "properties": {
+                "agent_id": {"type": "string"},
+                "sentiment": {
+                  "type": "number",
+                  "description": "0-1 scale. <0.4 red, 0.4-0.6 yellow, >0.6 green",
+                  "minimum": 0,
+                  "maximum": 1
+                },
+                "is_active_today": {
+                  "type": "boolean",
+                  "description": "True if agent took an action this day. Drives pulse animation."
+                },
+                "flight_risk_flag": {
+                  "type": "boolean",
+                  "description": "True if agent has UPDATE_LINKEDIN action by this day"
+                }
+              }
+            }
+          },
+          "aggregate_sentiment": {"type": "number"},
+          "actions_today_count": {"type": "integer"}
+        }
+      }
+    },
+    "cohort_metrics": {
+      "type": "array",
+      "description": "Department × location heat map rows.",
+      "items": {
+        "type": "object",
+        "required": ["cohort_label", "department", "headcount", "sentiment_delta", "enps_delta", "top_concern", "risk_level"],
+        "properties": {
+          "cohort_label": {"type": "string", "example": "Engineering – San Francisco"},
+          "department": {"type": "string"},
+          "location": {"type": "string"},
+          "headcount": {"type": "integer"},
+          "baseline_sentiment": {"type": "number"},
+          "predicted_sentiment": {"type": "number"},
+          "sentiment_delta": {"type": "number"},
+          "enps_delta": {"type": "number"},
+          "top_concern": {"type": "string"},
+          "risk_level": {"type": "string", "enum": ["high", "medium", "low"]},
+          "flight_risk_count": {
+            "type": "integer",
+            "description": "Number of agents in this cohort with UPDATE_LINKEDIN action"
+          },
+          "loudest_action_type": {
+            "type": "string",
+            "description": "Most frequent action_type in this cohort, useful for narrative summaries"
+          }
+        }
+      }
+    },
+    "themes": {
+      "type": "array",
+      "description": "Top 3 concern clusters extracted from action.content strings. Quotes are real action.content values, not generated separately.",
+      "minItems": 1,
+      "maxItems": 5,
+      "items": {
+        "type": "object",
+        "required": ["label", "volume", "quotes"],
+        "properties": {
+          "label": {"type": "string", "example": "Loss of flexibility"},
+          "description": {"type": "string"},
+          "volume": {
+            "type": "integer",
+            "description": "Number of actions whose content maps to this theme"
+          },
+          "volume_pct": {"type": "number"},
+          "quotes": {
+            "type": "array",
+            "description": "Top 2-3 representative quotes pulled directly from action.content fields",
+            "items": {
+              "type": "object",
+              "required": ["text", "agent_id", "action_id"],
+              "properties": {
+                "text": {"type": "string"},
+                "agent_id": {"type": "string"},
+                "action_id": {
+                  "type": "string",
+                  "description": "Reference back to the originating action, lets UI link back to feed"
+                },
+                "department": {"type": "string"},
+                "role": {"type": "string"}
+              }
+            }
+          },
+          "departments_affected": {
+            "type": "array",
+            "items": {"type": "string"}
+          }
+        }
+      }
+    },
+    "recommendation": {
+      "type": "object",
+      "required": ["title", "rationale", "suggested_rewrite", "projected_impact"],
+      "properties": {
+        "title": {"type": "string"},
+        "rationale": {"type": "string"},
+        "suggested_rewrite": {
+          "type": "string",
+          "description": "Pre-fills the v2 policy editor when 'Apply' is clicked"
+        },
+        "projected_impact": {
+          "type": "object",
+          "properties": {
+            "negative_action_reduction_pct": {"type": "number"},
+            "linkedin_updates_avoided": {"type": "integer"},
+            "engagement_lift": {"type": "number"},
+            "confidence": {"type": "string", "enum": ["high", "medium", "low"]}
+          }
+        }
+      }
+    },
+    "summary": {
+      "type": "string",
+      "description": "Executive 1-liner shown at top of results",
+      "example": "Predicted -13 eNPS. 8 LinkedIn updates expected, primarily Senior ICs in Engineering SF. Top concern: loss of flexibility."
+    },
+    "computed_at": {"type": "string", "format": "date-time"},
+    "computation_ms": {"type": "integer"},
+    "fallback_used": {
+      "type": "boolean",
+      "description": "True if heuristic fallback was used for any agent due to LLM failure. Surfaces in low-confidence label."
+    }
+  }
+}
