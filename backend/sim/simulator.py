@@ -39,12 +39,23 @@ from .sentiment_aggregator import (
     derive_metrics,
 )
 
-ROOT = Path(__file__).resolve().parent.parent.parent
-NORTHWIND_PATH = ROOT / "contracts" / "northwind.json"
+def _find_northwind() -> Path:
+    """northwind.json lives at <repo>/contracts/northwind.json locally, but on
+    Railway the Root Directory is backend/ so contracts/ ships under
+    backend/contracts/. Try both."""
+    here = Path(__file__).resolve()
+    candidates = [
+        here.parent.parent.parent / "contracts" / "northwind.json",  # repo root layout
+        here.parent.parent / "contracts" / "northwind.json",         # backend-as-root layout
+    ]
+    for c in candidates:
+        if c.exists():
+            return c
+    raise FileNotFoundError(f"northwind.json not found. Tried: {candidates}")
 
 
 def load_northwind() -> dict[str, Any]:
-    with open(NORTHWIND_PATH) as f:
+    with open(_find_northwind()) as f:
         return json.load(f)
 
 
