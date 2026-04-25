@@ -64,3 +64,4 @@ backend/
 9. ⏳ FastAPI `POST /simulate` endpoint
 10. ⏳ Pre-cache layer (hash policy text -> cached result)
 ```
+
