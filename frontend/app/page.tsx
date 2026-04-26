@@ -6,7 +6,7 @@ export default function Home() {
     <main className="flex flex-1 flex-col items-center justify-center px-8 py-16">
       <div className="w-full max-w-2xl flex flex-col gap-8">
         <header className="flex flex-col gap-2">
-          <h1 className="text-4xl font-semibold tracking-tight">Lattice Predict</h1>
+          <h1 className="text-4xl font-semibold tracking-tight">Echo</h1>
           <p className="text-neutral-400">
             A wind tunnel for HR decisions. Frontend dev index.
           </p>

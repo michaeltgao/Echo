@@ -1,4 +1,4 @@
-# Lattice Predict — Backend (P1)
+# Echo — Backend (P1)
 
 Python FastAPI backend. Owns the simulation core: policy parsing, agent action selection, sentiment aggregation, theme clustering, recommendation generation.
 

@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Lattice Predict",
+  title: "Echo",
   description: "A wind tunnel for HR decisions.",
 };
 

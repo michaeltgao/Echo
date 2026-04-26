@@ -26,7 +26,7 @@ CORS is open. Localhost dev hits prod URL directly.
 ### Quick smoke test (run this first to confirm your network can hit prod)
 ```bash
 curl https://echo-production-4ead.up.railway.app/health
-# expect: {"status":"ok","service":"lattice-predict"}
+# expect: {"status":"ok","service":"echo"}
 ```
 
 ### When you hit problems

@@ -1,4 +1,4 @@
-# PRD: Lattice Predict (Hackathon MVP v3)
+# PRD: Echo (Hackathon MVP v3)
 
 **Posture:** Build for "works for anybody," demo the canonical path.
 **Inspiration:** MiroFish-style action-based agent simulation, retargeted at workforce scenarios.
@@ -355,7 +355,7 @@ In priority:
 
 > HR teams are reactive. They announce a policy on Tuesday and learn what went wrong on Friday — through pulse surveys, Slack rumors, and resignations.
 >
-> Lattice Predict is a wind tunnel for people decisions. Paste your draft policy and we simulate how 50 employee personas — modeled on real archetypes with motivators, sensitivities, trust networks, and scenario-specific context — will *act* over 30 days.
+> Echo is a wind tunnel for people decisions. Paste your draft policy and we simulate how 50 employee personas — modeled on real archetypes with motivators, sensitivities, trust networks, and scenario-specific context — will *act* over 30 days.
 >
 > Not abstract sentiment. Real behavior. They DM peers. Vent in channels. Go quiet. Update LinkedIn. Request exceptions.
 >

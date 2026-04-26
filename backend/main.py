@@ -26,7 +26,7 @@ from sim.simulator_stream import simulate_stream
 
 ROOT = Path(__file__).resolve().parent
 
-app = FastAPI(title="Lattice Predict", version="0.3")
+app = FastAPI(title="Echo", version="0.3")
 
 app.add_middleware(
     CORSMiddleware,
@@ -46,7 +46,7 @@ class SimulateRequest(BaseModel):
 
 @app.get("/health")
 def health() -> dict[str, str]:
-    return {"status": "ok", "service": "lattice-predict"}
+    return {"status": "ok", "service": "echo"}
 
 
 @app.get("/northwind")

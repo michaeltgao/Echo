@@ -1,4 +1,4 @@
-# Lattice Predict
+# Echo
 
 A wind tunnel for HR decisions. Paste any policy, watch your workforce act — message peers, vent in channels, go quiet, update LinkedIn — and edit before you ship.
 

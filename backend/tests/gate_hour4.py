@@ -163,7 +163,7 @@ async def run_one_policy(policy_name: str, policy_text: str) -> None:
 
 
 async def main() -> None:
-    print("Lattice Predict — Hour 4 Gate")
+    print("Echo — Hour 4 Gate")
     print(f"Policies: {len(POLICIES)} | Personas: {len(PERSONAS)} | Total calls: {len(POLICIES) * (len(PERSONAS) + 1)}\n")
 
     overall_t0 = time.time()
