@@ -142,17 +142,28 @@ async def _replay_cached(cached: dict, policy_version: str):
 
     actions = cached.get("actions", [])
     total = len(actions)
-    # Pace cached replay at 250ms/action so a typical ~120-action canonical
-    # run lands in ~30s — same beat as /graph's 1s-per-day playback.
-    # Frontend cards appear in real time with room to read each one and
-    # graph animations have room to play out (cap is 5 concurrent at 700ms).
-    PACE_MS = 250
-    for i, act in enumerate(actions):
-        yield _sse_frame({"type": "action", "action": act})
-        yield _sse_frame({"type": "tick", "completed": i + 1, "total": total})
-        await asyncio.sleep(PACE_MS / 1000)
+    # Match /graph's 1-second-per-day playback exactly. Actions on the same
+    # day burst together (just like useActionAnimator on /graph fires all
+    # actions for floor(currentDay) the moment the scrubber crosses an
+    # integer); then we wait 1s before advancing to the next day. Empty
+    # days still pause 1s so total run is 30s regardless of action volume.
+    DAY_MS = 1000
+    snapshots = cached.get("snapshots", [])
+    total_days = len(snapshots) if snapshots else 30
 
-    yield _sse_frame({"type": "stage", "stage": "aggregating", "elapsed_ms": int(total * PACE_MS) + 20})
+    by_day: dict[int, list] = {}
+    for act in actions:
+        by_day.setdefault(int(act.get("day", 0)), []).append(act)
+
+    emitted = 0
+    for day in range(total_days):
+        for act in by_day.get(day, []):
+            emitted += 1
+            yield _sse_frame({"type": "action", "action": act})
+            yield _sse_frame({"type": "tick", "completed": emitted, "total": total})
+        await asyncio.sleep(DAY_MS / 1000)
+
+    yield _sse_frame({"type": "stage", "stage": "aggregating", "elapsed_ms": total_days * DAY_MS + 20})
     yield _sse_frame({"type": "result", "result": cached})
 
 
