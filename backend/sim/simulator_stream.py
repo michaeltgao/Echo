@@ -33,12 +33,13 @@ from .sentiment_aggregator import (
     derive_metrics,
 )
 from .simulator import (
+    _actions_with_agent_context,
     _compute_cohort_metrics,
     _hash_policy,
-    _placeholder_recommendation,
-    _placeholder_themes,
     load_northwind,
 )
+from .recommendation import generate_recommendation
+from .theme_clusterer import cluster_themes
 
 
 CONCURRENCY = 10
@@ -178,21 +179,22 @@ async def simulate_stream(
 
         snapshots = aggregate_sentiment(agents, actions, days=days)
         metrics = derive_metrics(agents, snapshots)
-        cohort_metrics = _compute_cohort_metrics(agents, snapshots, actions)
 
         volume: dict[str, int] = {}
         for act in actions:
             volume[act["action_type"]] = volume.get(act["action_type"], 0) + 1
 
-        themes_placeholder = _placeholder_themes(actions, agents_by_id)
-        rec_placeholder = _placeholder_recommendation(parsed)
+        theme_actions = _actions_with_agent_context(actions, agents_by_id)
+        themes = await cluster_themes(theme_actions)
+        recommendation = await generate_recommendation(parsed, themes)
+        cohort_metrics = _compute_cohort_metrics(agents, snapshots, actions, themes)
 
         delta = metrics["predicted"]["enps"] - metrics["baseline"]["enps"]
         li_count = volume.get("UPDATE_LINKEDIN", 0)
         summary = (
             f"Predicted {delta:+d} eNPS over 30 days. "
             f"{li_count} LinkedIn updates expected. "
-            f"Top concern: {(themes_placeholder[0]['label'] if themes_placeholder else 'mixed')}."
+            f"Top concern: {(themes[0]['label'] if themes else 'mixed')}."
         )
 
         result_obj = {
@@ -207,8 +209,8 @@ async def simulate_stream(
             "action_volume_summary": volume,
             "snapshots": snapshots,
             "cohort_metrics": cohort_metrics,
-            "themes": themes_placeholder,
-            "recommendation": rec_placeholder,
+            "themes": themes,
+            "recommendation": recommendation,
             "summary": summary,
             "computed_at": datetime.now(timezone.utc).isoformat(),
             "computation_ms": elapsed_ms(),

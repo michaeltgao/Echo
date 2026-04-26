@@ -8,12 +8,9 @@ Wires the full pipeline from PRD §5:
     -> select_action × N (parallel batches of 10)
     -> aggregate_sentiment (deterministic)
     -> derive_metrics (deterministic)
-    -> [theme clusterer + recommendation TODO P4]
+    -> cluster_themes (P4)
+    -> generate_recommendation (P4)
     -> SimulationResult JSON
-
-Everything except themes + recommendation. Those are P4's modules; this
-returns a result with placeholder themes/rec so frontend can integrate
-end-to-end before P4 lands.
 """
 from __future__ import annotations
 
@@ -31,6 +28,7 @@ from .activity_scheduler import schedule_activity
 from .llm import gather_with_concurrency
 from .persona_enricher import enrich_personas
 from .policy_parser import parse_policy
+from .recommendation import generate_recommendation
 from .sentiment_aggregator import (
     aggregate_sentiment,
     attach_impact,
@@ -38,19 +36,18 @@ from .sentiment_aggregator import (
     compute_visibility,
     derive_metrics,
 )
+from .theme_clusterer import cluster_themes
 
 def _find_northwind() -> Path:
-    """northwind.json lives at <repo>/contracts/northwind.json locally, but on
-    Railway the Root Directory is backend/ so contracts/ ships under
-    backend/contracts/. Try both."""
+    """Find northwind.json in both local and Railway backend-root layouts."""
     here = Path(__file__).resolve()
     candidates = [
-        here.parent.parent.parent / "contracts" / "northwind.json",  # repo root layout
-        here.parent.parent / "contracts" / "northwind.json",         # backend-as-root layout
+        here.parent.parent.parent / "contracts" / "northwind.json",
+        here.parent.parent / "contracts" / "northwind.json",
     ]
-    for c in candidates:
-        if c.exists():
-            return c
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate
     raise FileNotFoundError(f"northwind.json not found. Tried: {candidates}")
 
 
@@ -176,17 +173,18 @@ async def simulate(
     snapshots = aggregate_sentiment(agents, actions, days=days)
     metrics = derive_metrics(agents, snapshots)
 
-    # ---- 7. cohort metrics ----
-    cohort_metrics = _compute_cohort_metrics(agents, snapshots, actions)
-
-    # ---- 8. action volume summary ----
+    # ---- 7. action volume summary ----
     volume: dict[str, int] = {}
     for act in actions:
         volume[act["action_type"]] = volume.get(act["action_type"], 0) + 1
 
-    # ---- 9. placeholder themes + recommendation (P4 will replace) ----
-    themes_placeholder = _placeholder_themes(actions, agents_by_id)
-    rec_placeholder = _placeholder_recommendation(parsed)
+    # ---- 8. theme clustering + recommendation (P4 modules) ----
+    theme_actions = _actions_with_agent_context(actions, agents_by_id)
+    themes = await cluster_themes(theme_actions)
+    recommendation = await generate_recommendation(parsed, themes)
+
+    # ---- 9. cohort metrics ----
+    cohort_metrics = _compute_cohort_metrics(agents, snapshots, actions, themes)
 
     # ---- 10. summary line ----
     li_count = volume.get("UPDATE_LINKEDIN", 0)
@@ -194,7 +192,7 @@ async def simulate(
     summary = (
         f"Predicted {delta:+d} eNPS over 30 days. "
         f"{li_count} LinkedIn updates expected. "
-        f"Top concern: {(themes_placeholder[0]['label'] if themes_placeholder else 'mixed')}."
+        f"Top concern: {(themes[0]['label'] if themes else 'mixed')}."
     )
 
     return {
@@ -209,8 +207,8 @@ async def simulate(
         "action_volume_summary": volume,
         "snapshots": snapshots,
         "cohort_metrics": cohort_metrics,
-        "themes": themes_placeholder,
-        "recommendation": rec_placeholder,
+        "themes": themes,
+        "recommendation": recommendation,
         "summary": summary,
         "computed_at": datetime.now(timezone.utc).isoformat(),
         "computation_ms": int((time.time() - t0) * 1000),
@@ -222,6 +220,7 @@ def _compute_cohort_metrics(
     agents: list[dict[str, Any]],
     snapshots: list[dict[str, Any]],
     actions: list[dict[str, Any]],
+    themes: list[dict[str, Any]] | None = None,
 ) -> list[dict[str, Any]]:
     final = {s["agent_id"]: s for s in snapshots[-1]["agent_states"]}
 
@@ -255,7 +254,7 @@ def _compute_cohort_metrics(
         enps_delta = round(delta * 100)
 
         risk = "high" if delta < -0.10 else "medium" if delta < -0.04 else "low"
-        top_concern = "Loss of flexibility" if dept == "Engineering" else "Compensation fairness"  # crude default; themes will refine
+        top_concern = _top_concern_for_cohort(dept, themes or [])
 
         out.append({
             "cohort_label": f"{dept} – {loc}",
@@ -276,46 +275,27 @@ def _compute_cohort_metrics(
     return out
 
 
-def _placeholder_themes(
-    actions: list[dict[str, Any]], agents_by_id: dict[str, dict[str, Any]]
+def _actions_with_agent_context(
+    actions: list[dict[str, Any]],
+    agents_by_id: dict[str, dict[str, Any]],
 ) -> list[dict[str, Any]]:
-    """Naive theme placeholder until P4 wires the LLM clusterer.
-
-    Just picks the 3 highest-intensity actions with content as a single bucket.
-    """
-    with_content = [a for a in actions if a.get("content")]
-    with_content.sort(key=lambda a: a.get("intensity", 0), reverse=True)
-    quotes = []
-    for act in with_content[:3]:
-        agent = agents_by_id.get(act["agent_id"], {})
-        quotes.append({
-            "text": act["content"],
-            "agent_id": act["agent_id"],
-            "action_id": act["id"],
-            "department": agent.get("department", ""),
-            "role": agent.get("role", ""),
-        })
-    if not quotes:
-        return []
-    return [{
-        "label": "Mixed concerns",
-        "description": "Theme clustering pending (P4 module).",
-        "volume": len(with_content),
-        "volume_pct": round(100 * len(with_content) / max(1, len(actions))),
-        "quotes": quotes,
-        "departments_affected": list({q["department"] for q in quotes if q["department"]}),
-    }]
+    enriched = []
+    for act in actions:
+        actor = agents_by_id.get(act.get("agent_id"), {})
+        copied = dict(act)
+        copied["department"] = actor.get("department", "")
+        copied["role"] = actor.get("role", "")
+        copied["location"] = actor.get("location", "")
+        copied["name"] = actor.get("name", "")
+        enriched.append(copied)
+    return enriched
 
 
-def _placeholder_recommendation(parsed: dict[str, Any]) -> dict[str, Any]:
-    return {
-        "title": "Recommendation pending",
-        "rationale": "Recommendation generator is a P4 module — placeholder shown here.",
-        "suggested_rewrite": "(P4 will replace this with the rewritten policy.)",
-        "projected_impact": {
-            "negative_action_reduction_pct": 0,
-            "linkedin_updates_avoided": 0,
-            "engagement_lift": 0.0,
-            "confidence": "low",
-        },
-    }
+def _top_concern_for_cohort(department: str, themes: list[dict[str, Any]]) -> str:
+    for theme in themes:
+        if department in theme.get("departments_affected", []):
+            return str(theme.get("label", "Mixed concerns"))
+        for quote in theme.get("quotes", []):
+            if quote.get("department") == department:
+                return str(theme.get("label", "Mixed concerns"))
+    return str(themes[0].get("label", "Mixed concerns")) if themes else "Mixed concerns"
