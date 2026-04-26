@@ -1,28 +1,31 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { fetchNorthwind } from "@/lib/api";
 import { useAppStore } from "@/lib/store";
 
 // Mounted once in the root layout. Loads the workforce roster into the store
 // as soon as the app boots so any route can read from useAppStore().
+//
+// startedRef gates the effect so it runs at most once. Without this, status in
+// deps + React Strict Mode double-invoke + the abort-on-cleanup pattern made
+// the effect cancel its own fetch on the first re-render, leaving the store
+// stuck at "loading".
 export default function NorthwindLoader() {
-  const status = useAppStore((s) => s.northwindStatus);
+  const startedRef = useRef(false);
   const setNorthwind = useAppStore((s) => s.setNorthwind);
   const setNorthwindStatus = useAppStore((s) => s.setNorthwindStatus);
 
   useEffect(() => {
-    if (status !== "idle") return;
-    const controller = new AbortController();
+    if (startedRef.current) return;
+    startedRef.current = true;
     setNorthwindStatus("loading");
-    fetchNorthwind(controller.signal)
+    fetchNorthwind()
       .then(setNorthwind)
       .catch((err: unknown) => {
-        if ((err as Error).name === "AbortError") return;
         setNorthwindStatus("error", (err as Error).message);
       });
-    return () => controller.abort();
-  }, [status, setNorthwind, setNorthwindStatus]);
+  }, [setNorthwind, setNorthwindStatus]);
 
   return null;
 }
