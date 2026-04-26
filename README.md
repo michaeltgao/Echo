@@ -4,7 +4,7 @@
 
 Echo simulates how 50 synthetic employees, modeled with motivators, sensitivities, and trust networks, will behave in the 30 days after you announce a workplace policy. You see the morale hit before it happens, the cohorts that will push back, and exactly what they'll say. Then you change a few words and watch the same workforce stay calm.
 
-See [PRD.md](PRD.md) for the full product spec. Hacktech Project.
+See [PRD.md](PRD.md) for the full product spec. Hacktech Project: Michael Gao, Jadon Lam, Jan Safrata, Nicholas Ciordas
 
 ---
 
