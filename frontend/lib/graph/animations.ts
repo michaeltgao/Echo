@@ -16,16 +16,17 @@ export const ACTION_DURATION_MS: Record<ActionType, number> = {
   DO_NOTHING: 0,
 };
 
-// Tuned for a dark canvas. Used both for edge pulses (P2 hero visual) and as
-// the action-feed accent (P3 will reuse).
+// Tuned for the warm-ink editorial canvas. Functional differentiation kept
+// (each type is visually distinct), but pulled toward the palette so the
+// graph reads as part of the product, not a Tailwind dashboard.
 export const ACTION_COLOR: Record<ActionType, string> = {
-  VENT_TO_PEER: "#fb923c", // orange-400
-  POST_IN_CHANNEL: "#ef4444", // red-500
-  MESSAGE_MANAGER: "#3b82f6", // blue-500
-  GO_QUIET: "#a3a3a3", // neutral-400
-  UPDATE_LINKEDIN: "#a855f7", // purple-500
-  ADVOCATE: "#22c55e", // green-500
-  REQUEST_EXCEPTION: "#facc15", // yellow-400
+  VENT_TO_PEER: "#dba03f", // amber-bright (heated, but ours)
+  POST_IN_CHANNEL: "#c4892b", // amber (loud, broadcast)
+  MESSAGE_MANAGER: "#a39a8c", // bone-muted (private, structural)
+  GO_QUIET: "#736a5e", // bone-faint (withdrawal)
+  UPDATE_LINKEDIN: "#a85a3e", // rust (flight, gravity)
+  ADVOCATE: "#7a9b62", // sage (positive)
+  REQUEST_EXCEPTION: "#d8b870", // sand (formal ask)
   DO_NOTHING: "transparent",
 };
 

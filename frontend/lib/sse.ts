@@ -29,6 +29,7 @@ export async function runSimulation({
 }: RunSimulationOpts): Promise<void> {
   const store = useAppStore.getState();
   store.resetSimulation();
+  store.beginLiveRun();
 
   const resp = await fetch(`${API_BASE}/simulate/stream`, {
     method: "POST",
@@ -89,6 +90,24 @@ function parseFrame(frame: string): SSEEvent | null {
 }
 
 function dispatchEvent(event: SSEEvent): void {
+  // Browser-side trace: open DevTools console while clicking Run on
+  // /predict/new to confirm events are arriving from /simulate/stream.
+  // Filtered to the [sse] tag so it's easy to grep in the console.
+  if (typeof window !== "undefined") {
+    const summary =
+      event.type === "stage"
+        ? event.stage
+        : event.type === "tick"
+          ? `${event.completed}/${event.total}`
+          : event.type === "action"
+            ? event.action.action_type
+            : event.type === "error"
+              ? event.message
+              : "";
+    // eslint-disable-next-line no-console
+    console.debug("[sse]", event.type, summary);
+  }
+
   const s = useAppStore.getState();
   switch (event.type) {
     case "stage":
@@ -105,6 +124,7 @@ function dispatchEvent(event: SSEEvent): void {
       return;
     case "result":
       s.setResult(event.result);
+      s.endLiveRun();
       return;
     case "error":
       s.setSimulationError(event.message);

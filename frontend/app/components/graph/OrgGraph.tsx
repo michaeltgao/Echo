@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import ReactFlow, {
   Background,
   BackgroundVariant,
   Controls,
   ReactFlowProvider,
+  useReactFlow,
   type Edge,
   type Node,
   type NodeTypes,
@@ -54,7 +55,8 @@ function buildGraph(
 
   const edges: Edge[] = [];
 
-  // Reporting line edges — solid blue, agent → manager.
+  // Reporting line edges — bone-dim solid, agent → manager. Subtle structural
+  // skeleton; the eye doesn't get pulled to it.
   for (const a of nw.agents) {
     if (!a.manager_id) continue;
     edges.push({
@@ -62,11 +64,11 @@ function buildGraph(
       source: a.id,
       target: a.manager_id,
       type: "straight",
-      style: { stroke: "#3b82f6", strokeWidth: 1.4, opacity: 0.55 },
+      style: { stroke: "#4a4338", strokeWidth: 1.2, opacity: 0.55 },
     });
   }
 
-  // Collaboration edges — dashed light gray, weight → opacity.
+  // Collaboration edges — dashed hairline, weight → opacity. Even more subtle.
   for (const e of nw.collaboration_edges) {
     edges.push({
       id: `collab:${e.source}-${e.target}`,
@@ -74,10 +76,10 @@ function buildGraph(
       target: e.target,
       type: "straight",
       style: {
-        stroke: "#a3a3a3",
+        stroke: "#3f3630",
         strokeWidth: 1,
-        strokeDasharray: "4 4",
-        opacity: 0.15 + e.weight * 0.35,
+        strokeDasharray: "3 4",
+        opacity: 0.15 + e.weight * 0.3,
       },
     });
   }
@@ -92,6 +94,7 @@ interface OrgGraphInnerProps {
 function OrgGraphInner({ northwind }: OrgGraphInnerProps) {
   usePlayback();
   useActionAnimator();
+  const reactFlow = useReactFlow();
   const layout = useMemo(() => buildLayout(northwind), [northwind]);
 
   const initial = useMemo(
@@ -102,11 +105,58 @@ function OrgGraphInner({ northwind }: OrgGraphInnerProps) {
   const [graph, setGraph] = useState<BuiltGraph>(initial);
   const settleStartRef = useRef<number | null>(null);
   const rafRef = useRef<number | null>(null);
+  const settleDoneRef = useRef(false);
+  const wrapperRef = useRef<HTMLDivElement | null>(null);
+
+  // Compute the precise viewport (zoom + pan) needed to fit ALL final
+  // positions with `padding` margin. React Flow's auto-fitView relies on
+  // node DOM dimensions and consistently mis-measures custom-rendered
+  // nodes — this math always lands the camera correctly.
+  const fitToLayout = useCallback(
+    (padding = 0.18, duration = 500) => {
+      const wrap = wrapperRef.current;
+      if (!wrap) return;
+      const W = wrap.clientWidth;
+      const H = wrap.clientHeight;
+      if (W < 10 || H < 10) return;
+
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      for (const agent of northwind.agents) {
+        const p = layout.positions.get(agent.id);
+        if (!p) continue;
+        const r = nodeRadius(agent.influence_weight);
+        if (p.x - r < minX) minX = p.x - r;
+        if (p.y - r < minY) minY = p.y - r;
+        if (p.x + r > maxX) maxX = p.x + r;
+        if (p.y + r > maxY) maxY = p.y + r;
+      }
+      if (!isFinite(minX)) return;
+
+      const layoutW = maxX - minX;
+      const layoutH = maxY - minY;
+      const cx = (minX + maxX) / 2;
+      const cy = (minY + maxY) / 2;
+
+      const inset = 1 + padding * 2;
+      const zoomX = W / (layoutW * inset);
+      const zoomY = H / (layoutH * inset);
+      const zoom = Math.min(zoomX, zoomY, 2);
+
+      reactFlow.setViewport(
+        { x: W / 2 - cx * zoom, y: H / 2 - cy * zoom, zoom },
+        { duration },
+      );
+    },
+    [layout, northwind, reactFlow],
+  );
 
   // On mount: animate from circle (initialPositions) to settled (positions)
-  // over SETTLE_MS using cubic ease-out.
+  // over SETTLE_MS using cubic ease-out. Once t === 1, glide the camera
+  // to fit the spread layout (otherwise React Flow's auto-fitView locks the
+  // viewport to the small initial circle and stays zoomed in).
   useEffect(() => {
     settleStartRef.current = null;
+    settleDoneRef.current = false;
 
     const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 
@@ -135,44 +185,102 @@ function OrgGraphInner({ northwind }: OrgGraphInnerProps) {
 
       if (t < 1) {
         rafRef.current = requestAnimationFrame(tick);
+      } else if (!settleDoneRef.current) {
+        settleDoneRef.current = true;
+        // Camera glides to the actual spread layout with comfortable margin.
+        fitToLayout(0.18, 500);
       }
     };
 
     rafRef.current = requestAnimationFrame(tick);
+    // Camera glides toward the spread layout in parallel with the node
+    // settle. Both arrive at t=1; we re-fit once more at the end to nail
+    // sub-pixel precision.
+    const initialFit = setTimeout(() => fitToLayout(0.18, 1000), 16);
     return () => {
       if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
+      clearTimeout(initialFit);
     };
-  }, [layout]);
+  }, [layout, fitToLayout]);
+
+  // Refit on container resize (handles the setup -> playing column-span swap
+  // and any window resize). Throttled by RAF; only fires after settle done.
+  useEffect(() => {
+    const el = wrapperRef.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    let lastWidth = el.clientWidth;
+    let pending = false;
+    const obs = new ResizeObserver((entries) => {
+      const w = entries[0]?.contentRect.width ?? 0;
+      if (Math.abs(w - lastWidth) < 32) return;
+      lastWidth = w;
+      if (!settleDoneRef.current || pending) return;
+      pending = true;
+      requestAnimationFrame(() => {
+        pending = false;
+        fitToLayout(0.18, 300);
+      });
+    });
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [fitToLayout]);
 
   return (
     <div
-      className="relative h-[600px] w-full overflow-hidden rounded-lg border border-neutral-800 bg-neutral-950"
-      style={{ minWidth: GRAPH_VIEWPORT.width / 2 }}
+      ref={wrapperRef}
+      className="relative h-[600px] w-full overflow-hidden rounded-[2px] border border-hairline-strong"
+      style={{
+        minWidth: GRAPH_VIEWPORT.width / 2,
+        // Atmospheric ink — soft radial highlight near center, deepens at edges.
+        background:
+          "radial-gradient(ellipse 80% 70% at 50% 45%, #1f1a17 0%, #161210 60%, #100c0a 100%)",
+      }}
     >
       <ReactFlow
         nodes={graph.nodes}
         edges={graph.edges}
         nodeTypes={NODE_TYPES}
         fitView
-        fitViewOptions={{ padding: 0.15 }}
+        fitViewOptions={{ padding: 0.28 }}
         proOptions={{ hideAttribution: true }}
         minZoom={0.4}
         maxZoom={2}
         nodesDraggable={false}
         nodesConnectable={false}
         elementsSelectable={false}
+        panOnScroll={false}
+        zoomOnScroll={false}
       >
         <Background
           variant={BackgroundVariant.Dots}
-          gap={24}
-          size={1}
-          color="#1f2937"
+          gap={36}
+          size={0.6}
+          color="#2a221d"
         />
         <Controls
           showInteractive={false}
-          className="!bg-neutral-900 !border-neutral-700 [&_button]:!bg-neutral-900 [&_button]:!border-neutral-700 [&_button]:!text-neutral-300"
+          className="!bg-ink-elevated !border-hairline-strong !shadow-none [&_button]:!bg-ink-elevated [&_button]:!border-hairline [&_button]:!text-bone-faint [&_button:hover]:!text-amber"
         />
       </ReactFlow>
+
+      {/* Top + bottom vignette gradients for depth */}
+      <div
+        className="pointer-events-none absolute inset-x-0 top-0 h-20"
+        style={{
+          background:
+            "linear-gradient(to bottom, rgba(16,12,10,0.85), transparent)",
+        }}
+        aria-hidden
+      />
+      <div
+        className="pointer-events-none absolute inset-x-0 bottom-0 h-20"
+        style={{
+          background:
+            "linear-gradient(to top, rgba(16,12,10,0.85), transparent)",
+        }}
+        aria-hidden
+      />
+
       <AnimationLayer positions={layout.positions} />
       <FxDefs />
     </div>

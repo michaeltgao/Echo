@@ -1,6 +1,7 @@
 // Sentiment → color mapping for the org graph.
-// Spec (PRD/P2 task): <0.4 red, 0.4-0.6 yellow, 0.6-0.75 yellow-green, >0.75 green.
-// We anchor at band boundaries and linearly interpolate between for smooth playback.
+// Tuned to sit on the warm-ink editorial canvas (--color-ink, --color-bone,
+// --color-amber, --color-rust, --color-sage). Values stay legible against
+// dept-tint borders. Smooth linear interpolation between five stops.
 
 import type { SimulationResult } from "@/lib/types";
 
@@ -12,11 +13,11 @@ interface Stop {
 }
 
 const STOPS: Stop[] = [
-  { s: 0.0, r: 239, g: 68, b: 68 }, // red-500
-  { s: 0.4, r: 245, g: 158, b: 11 }, // amber-500
-  { s: 0.6, r: 250, g: 204, b: 21 }, // yellow-400
-  { s: 0.75, r: 132, g: 204, b: 22 }, // lime-500
-  { s: 1.0, r: 34, g: 197, b: 94 }, // green-500
+  { s: 0.0, r: 168, g: 90, b: 62 }, // rust — deep dissatisfaction
+  { s: 0.4, r: 196, g: 137, b: 43 }, // amber-dim — concerned
+  { s: 0.6, r: 219, g: 178, b: 116 }, // sand — neutral lean
+  { s: 0.75, r: 168, g: 184, b: 124 }, // sage-bright — positive
+  { s: 1.0, r: 122, g: 155, b: 98 }, // sage — settled / advocate
 ];
 
 function clamp01(x: number): number {

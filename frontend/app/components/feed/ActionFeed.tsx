@@ -44,9 +44,16 @@ export default function ActionFeed({ onActionClick, className = "" }: Props) {
   if (visible.length === 0) {
     return (
       <div
-        className={`rounded-lg border border-dashed border-neutral-800 bg-neutral-950 px-6 py-10 text-center text-sm text-neutral-500 ${className}`}
+        className={`rounded-[2px] border border-dashed border-hairline-strong bg-ink-elevated/40 px-6 py-12 flex flex-col items-center gap-3 ${className}`}
       >
-        Feed is quiet. Run a simulation to see employees react.
+        <span className="font-mono text-[11px] tracking-[0.18em] uppercase text-bone-faint flex items-center gap-3">
+          <span className="h-px w-8 bg-amber/40" />
+          <span>Feed quiet</span>
+          <span className="h-px w-8 bg-amber/40" />
+        </span>
+        <p className="font-display italic text-bone-muted text-[15px] leading-snug text-center max-w-[34ch]">
+          Run a simulation to watch employees react.
+        </p>
       </div>
     );
   }

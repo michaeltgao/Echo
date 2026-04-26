@@ -1,26 +1,182 @@
 @import "tailwindcss";
 
+/* =========================================================================
+   Echo design tokens — warm ink editorial
+   ========================================================================= */
+@theme {
+  /* Type families — pulled from next/font in layout.tsx */
+  --font-display: var(--font-fraunces), Georgia, "Times New Roman", serif;
+  --font-sans: var(--font-instrument-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, "SFMono-Regular", monospace;
+
+  /* Surfaces — warm ink, not pure black */
+  --color-ink: #161210;
+  --color-ink-elevated: #1c1715;
+  --color-ink-deep: #100c0a;
+
+  /* Foreground — bone/ivory, never #fff */
+  --color-bone: #ece4d6;
+  --color-bone-muted: #a39a8c;
+  --color-bone-faint: #736a5e;
+  --color-bone-dim: #4a4338;
+
+  /* Hairlines */
+  --color-hairline: #2e2620;
+  --color-hairline-strong: #3f3630;
+
+  /* Accent — burnished amber. Signals "caution / pre-deploy gravity". */
+  --color-amber: #c4892b;
+  --color-amber-bright: #dba03f;
+  --color-amber-dim: #8a6020;
+  --color-amber-deep: #4a3414;
+
+  /* Sober semantics */
+  --color-sage: #7a9b62;
+  --color-rust: #a85a3e;
+}
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  color-scheme: dark;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html,
+body {
+  background: var(--color-ink);
+  color: var(--color-bone);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  position: relative;
+}
+
+/* Subtle film grain — restrained, ~4% opacity, sits above content but
+   doesn't intercept events */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 100;
+  opacity: 0.04;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+}
+
+/* Selection — amber on ink */
+::selection {
+  background: var(--color-amber-deep);
+  color: var(--color-bone);
+}
+
+/* =========================================================================
+   Animations — restrained, deliberate. Single hairline draw is the
+   "wind tunnel" motif (airflow inscribed left-to-right).
+   ========================================================================= */
+@keyframes echo-draw-in {
+  from {
+    transform: scaleX(0);
+    transform-origin: left;
+  }
+  to {
+    transform: scaleX(1);
+    transform-origin: left;
+  }
+}
+
+@keyframes echo-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes echo-blur-in {
+  from {
+    opacity: 0;
+    filter: blur(6px);
+  }
+  to {
+    opacity: 1;
+    filter: blur(0);
+  }
+}
+
+@keyframes crawl {
+  0% {
+    transform: translateX(0);
+    opacity: 0.2;
+  }
+  20% {
+    opacity: 1;
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(540%);
+    opacity: 0.2;
+  }
+}
+
+@keyframes dot-blink {
+  0%,
+  100% {
+    opacity: 0.3;
+    transform: translateY(0);
+  }
+  50% {
+    opacity: 1;
+    transform: translateY(-1px);
+  }
+}
+
+.draw-in {
+  animation: echo-draw-in 900ms cubic-bezier(0.2, 0.8, 0.2, 1) 200ms both;
+}
+
+.fade-up {
+  animation: echo-fade-up 700ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.blur-in {
+  animation: echo-blur-in 1000ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+/* =========================================================================
+   Typography utilities
+   ========================================================================= */
+.t-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--color-bone-faint);
+  font-weight: 500;
+}
+
+.t-display-tight {
+  font-family: var(--font-display);
+  letter-spacing: -0.025em;
+  font-weight: 400;
+}
+
+.t-mono-tight {
+  font-family: var(--font-mono);
+  font-feature-settings: "zero";
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .draw-in,
+  .fade-up,
+  .blur-in {
+    animation: none;
+  }
 }
