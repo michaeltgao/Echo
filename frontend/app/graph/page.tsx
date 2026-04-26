@@ -18,7 +18,7 @@ import { CANONICAL_POLICIES, postSimulate } from "@/lib/api";
 //   ├─ Hero kicker
 //   ├─ Two columns:
 //   │    LEFT  (5/12)  PolicyMemo (sticky)
-//   │    RIGHT (7/12)  PlaybackControls + OrgGraph + EventLog
+//   │    RIGHT (7/12)  PlaybackControls + OrgGraph + DayTimeline
 //   ├─ System readout
 //   └─ Footer
 //
