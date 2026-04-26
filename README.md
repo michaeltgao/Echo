@@ -1,7 +1,5 @@
 # Echo
 
-> Building on Lattice (YC W16)
-
 > A wind tunnel for HR decisions. Paste any policy, watch your workforce *act* — message peers, vent in channels, go quiet, update LinkedIn — and edit before you ship.
 
 Echo simulates how 50 synthetic employees, modeled with motivators, sensitivities, and trust networks, will behave in the 30 days after you announce a workplace policy. You see the morale hit before it happens, the cohorts that will push back, and exactly what they'll say. Then you change a few words and watch the same workforce stay calm.
@@ -233,6 +231,10 @@ For a custom policy: navigate to `/predict/new`, paste your own text, click Run.
 Same simulation engine, different scenario inputs. Today's policy module proves the approach; the same action-based agent network extends to compensation strategies, OKR cadence changes, career-ladder redesigns, and reorg friction modeling.
 
 ---
+
+## YC x Hacktech Track
+
+Building on Lattice (YC W16).
 
 ## License
 
