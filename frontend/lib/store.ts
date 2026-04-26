@@ -19,6 +19,12 @@ interface AppState {
   stage: Stage | "done" | null;
   parsedPolicy: Record<string, unknown> | null;
   progress: { completed: number; total: number };
+  simulationError: string | null;
+
+  // Comparison state — set when user clicks "Apply Recommendation". Holds the
+  // v1 result so the compare view can render v1-vs-current side-by-side after
+  // v2 runs.
+  comparisonV1: SimulationResult | null;
 
   // Pre-indexed views for O(1) per-node lookup during playback.
   sentimentByAgent: Record<string, number[]> | null;
@@ -45,6 +51,8 @@ interface AppState {
   setParsedPolicy: (p: Record<string, unknown> | null) => void;
   setProgress: (completed: number, total: number) => void;
   setResult: (r: SimulationResult | null) => void;
+  setSimulationError: (msg: string | null) => void;
+  setComparisonV1: (r: SimulationResult | null) => void;
   resetSimulation: () => void;
 
   setCurrentDay: (d: number) => void;
@@ -68,6 +76,8 @@ export const useAppStore = create<AppState>((set) => ({
   stage: null,
   parsedPolicy: null,
   progress: { completed: 0, total: 0 },
+  simulationError: null,
+  comparisonV1: null,
   sentimentByAgent: null,
   flightRiskByAgent: null,
 
@@ -95,6 +105,8 @@ export const useAppStore = create<AppState>((set) => ({
       sentimentByAgent: r ? buildSentimentIndex(r) : null,
       flightRiskByAgent: r ? buildFlightRiskIndex(r) : null,
     }),
+  setSimulationError: (msg) => set({ simulationError: msg, stage: null }),
+  setComparisonV1: (r) => set({ comparisonV1: r }),
   resetSimulation: () =>
     set({
       result: null,
@@ -102,6 +114,7 @@ export const useAppStore = create<AppState>((set) => ({
       stage: null,
       parsedPolicy: null,
       progress: { completed: 0, total: 0 },
+      simulationError: null,
       sentimentByAgent: null,
       flightRiskByAgent: null,
       currentDay: 0,
