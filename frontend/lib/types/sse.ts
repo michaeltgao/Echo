@@ -16,21 +16,21 @@ export type ActionType =
 export type Stage = "parsing" | "enriching" | "scheduling" | "acting" | "aggregating";
 
 export interface ActionTarget {
-  type: "agent" | "channel" | "manager" | "external" | "none";
-  value: string;
+  type?: "agent" | "channel" | "manager" | "external" | "none";
+  value?: string;
 }
 
 export interface ActionRecord {
   id: string;
   day: number;
-  intra_day_order: number;
+  intra_day_order?: number;
   agent_id: string;
   action_type: ActionType;
-  target: ActionTarget;
-  content: string;
+  target?: ActionTarget;
+  content?: string;
   intensity: number;
-  is_visible_to: string[];
-  sentiment_impact?: { actor_delta: number; observer_delta: number };
+  is_visible_to?: string[];
+  sentiment_impact?: { actor_delta?: number; observer_delta?: number };
 }
 
 export type SSEEvent =
