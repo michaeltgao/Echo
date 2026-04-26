@@ -4,7 +4,7 @@
 
 Echo simulates how 50 synthetic employees, modeled with motivators, sensitivities, and trust networks, will behave in the 30 days after you announce a workplace policy. You see the morale hit before it happens, the cohorts that will push back, and exactly what they'll say. Then you change a few words and watch the same workforce stay calm.
 
-Hackathon project. See [PRD.md](PRD.md) for the full product spec.
+See [PRD.md](PRD.md) for the full product spec.
 
 ---
 
@@ -233,4 +233,4 @@ Same simulation engine, different scenario inputs. Today's policy module proves 
 
 ## License
 
-Hackathon project. No license declared.
+No license declared.
