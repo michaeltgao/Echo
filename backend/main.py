@@ -142,13 +142,17 @@ async def _replay_cached(cached: dict, policy_version: str):
 
     actions = cached.get("actions", [])
     total = len(actions)
+    # Pace cached replay at 250ms/action so a typical ~120-action canonical
+    # run lands in ~30s — same beat as /graph's 1s-per-day playback.
+    # Frontend cards appear in real time with room to read each one and
+    # graph animations have room to play out (cap is 5 concurrent at 700ms).
+    PACE_MS = 250
     for i, act in enumerate(actions):
         yield _sse_frame({"type": "action", "action": act})
         yield _sse_frame({"type": "tick", "completed": i + 1, "total": total})
-        # Tunable pacing — 50ms keeps the feed feeling alive without being slow
-        await asyncio.sleep(0.05)
+        await asyncio.sleep(PACE_MS / 1000)
 
-    yield _sse_frame({"type": "stage", "stage": "aggregating", "elapsed_ms": int(total * 50) + 20})
+    yield _sse_frame({"type": "stage", "stage": "aggregating", "elapsed_ms": int(total * PACE_MS) + 20})
     yield _sse_frame({"type": "result", "result": cached})
 
 
