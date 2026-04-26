@@ -10,10 +10,9 @@ See [PRD.md](PRD.md) for the full product spec.
 
 ## Live demo
 
-- **Backend:** https://echo-production-4ead.up.railway.app
-- **Frontend:** deployed via Vercel (link in the deploy section below)
+**[echosim.tech](https://echosim.tech)**
 
-The fastest path to seeing it work: open the frontend, click `Sample run`, then click the big amber **PLAY** button. A 30-day simulation of the canonical RTO mandate plays out in ~30 seconds.
+The fastest path to seeing it work: open the site, click `Sample run`, then click the big amber **PLAY** button. A 30-day simulation of the canonical RTO mandate plays out in ~30 seconds.
 
 ---
 
@@ -168,6 +167,8 @@ echo "NEXT_PUBLIC_API_URL=http://localhost:8000" > frontend/.env.local
 ---
 
 ## API
+
+The backend is a FastAPI app deployed on Railway. The hosted base URL is configured client-side in `frontend/lib/api.ts` and overridable via the `NEXT_PUBLIC_API_URL` env var.
 
 | Endpoint | Method | What it does |
 |---|---|---|
